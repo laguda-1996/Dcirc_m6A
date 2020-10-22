@@ -42,45 +42,65 @@ def predict(model, x):
     fx = model(x)
     return fx
 
-pos_train_fa = 'hela1_pos_51bp_1W.fasta'
+if __name__ == '__main__':
 
-model_path = '.'
-if model_path[-1] == '/':
-    model_path = model_path[:-1]
-checkpoint = torch.load(model_path + '/' + 'checkpoint.pth.tar', map_location=torch.device('cpu'))
+    parser = argparse.ArgumentParser()
 
-model = CNN51_RNN(HIDDEN_NUM, LAYER_NUM, FC_DROPOUT, RNN_DROPOUT, CELL)
-model.load_state_dict(checkpoint['state_dict'])
+    parser.add_argument("-predict_fa", "--predict_fasta", action="store", dest='predict_fa', required=True,
+                        help="predict fasta file")
+    parser.add_argument("-model_path", "--model_path", action="store", dest='model_path', required=True,
+                        help="model_path")
+    parser.add_argument("-outfile", "--outfile", action="store", dest='outfile', required=True,
+                        help="outfile name")
 
-X_test, fa_header = header_and_seqload(args.in_fa)
-X_test=np.array(X_test)
-X_test = X_test.reshape(X_test.shape[0], int(X_test.shape[1] / wordvec_len), wordvec_len)
-X_test = torch.from_numpy(X_test).float()
+    args = parser.parse_args()
 
 
-batch_size = 256
-i = 0
-N = X_test.shape[0]
-y_pred_test = []
-y_pred_prob_test = []
+    predict_file = args.predict_fa
+    model_path = args.model_path
+    if model_path[-1] == '/':
+        model_path = model_path[:-1]
+    checkpoint = torch.load(model_path + '/' + 'checkpoint.pth.tar', map_location=torch.device('cpu'))
 
-while i + batch_size < N:
-    x_batch = X_test[i:i + batch_size]
+    model = CNN51_RNN(HIDDEN_NUM, LAYER_NUM, FC_DROPOUT, RNN_DROPOUT, CELL)
+    model.load_state_dict(checkpoint['state_dict'])
 
-    fx = predict(model, x_batch)
-    y_pred = fx.cpu().data.numpy().argmax(axis=1)
-    prob_data = F.log_softmax(fx, dim=1).cpu().data.numpy()
-    for m in range(len(prob_data)):
-        y_pred_prob_test.append(np.exp(prob_data)[m][1])
+    X_test, fa_header = header_and_seqload(predict_file)
+    X_test=np.array(X_test)
+    X_test = X_test.reshape(X_test.shape[0], int(X_test.shape[1] / wordvec_len), wordvec_len)
+    X_test = torch.from_numpy(X_test).float()
 
-    y_pred_test += list(y_pred)
 
-    i += batch_size
+    batch_size = 256
+    i = 0
+    N = X_test.shape[0]
+    y_pred_test = []
+    y_pred_prob_test = []
 
-x_batch = X_test[i:N]
-fx = predict(model, x_batch)
-y_pred = fx.cpu().data.numpy().argmax(axis=1)
-prob_data = F.log_softmax(fx, dim=1).cpu().data.numpy()
+    with open(args.out_fn, 'w') as fw:
+        while i + batch_size < N:
+            x_batch = X_test[i:i + batch_size]
+            header_batch = fa_header[i:i + batch_size]
+
+            fx = predict(model, x_batch)
+            # y_pred = fx.cpu().data.numpy().argmax(axis=1)
+            prob_data = F.log_softmax(fx, dim=1).cpu().data.numpy()
+            for m in range(len(prob_data)):
+                # y_pred_prob_test.append(np.exp(prob_data)[m][1])
+                fw.write(header_batch[m] + '\t' + str(np.exp(prob_data)[m][1]) + '\n')
+
+            y_pred_test += list(y_pred)
+
+            i += batch_size
+
+        x_batch = X_test[i:N]
+        fx = predict(model, x_batch)
+        # y_pred = fx.cpu().data.numpy().argmax(axis=1)
+        prob_data = F.log_softmax(fx, dim=1).cpu().data.numpy()
+        for m in range(len(prob_data)):
+            # y_pred_prob_test.append(np.exp(prob_data)[m][1])
+            fw.write(header_batch[m] + '\t' + str(np.exp(prob_data)[m][1]) + '\n')
+
 
 
 
