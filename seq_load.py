@@ -38,7 +38,7 @@ def header_and_seqload(in_fa):
     data=[]
     fa_header=[]
     for record in SeqIO.parse(in_fa, "fasta"):
-        seq=str(record.seq)
+        seq=str(record.seq).upper()
         bicoding=convert_seq_to_code(seq)
         data.append(bicoding)
         fa_header.append(str(record.description))
