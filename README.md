@@ -7,4 +7,5 @@ Python3.7 pysam>=0.15 biopython>=1.78 pandas>=0.24 numpy>=1.18 sklearn>=0.22 pyt
 # Usage
 ## 1. Pretreatment
 ### 1.1 mapping result handle
-If you only have the raw data of sequencing, you need to use bowtie2 and hisat2 to compare the software with the reference genome to obtain the SAM file.
+If you only have the raw data of sequencing, you need to use bowtie2 and hisat2 to compare the software with the reference genome to obtain the SAM file.The `samtosite.py` is used to process SAM file to obtain the site of target A base.  
+    python samtosite.py -file (sam file)
